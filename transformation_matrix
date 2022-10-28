@@ -1,0 +1,99 @@
+import numpy as np
+csv_file = np.genfromtxt('6788.csv', delimiter=',', dtype=str)
+points = csv_file[1:,0:3].tolist()
+# print(points)
+def column(matrix, i):
+    return [row[i] for row in matrix]
+
+x = column(points,0)
+x = [int(float(i)) for i in x]
+y = column(points,1)
+y = [int(float(i)) for i in y]
+z = column(points,2)
+z = [int(float(i)) for i in z]
+
+x = np.asarray(x)
+y = np.asarray(y)
+z = np.asarray(z)
+#print(type(x))
+#print(x)
+#print(y)
+#print(z)
+
+# angles are in degrees
+tilt_angle = 30# tilt angle on Lidar gimbal
+z_angle = -20 #cable is not in the center
+y_angle = 0-tilt_angle
+x_angle = (0+tilt_angle)*np.sin(np.radians(tilt_angle))
+
+# convert angles to radians
+x_angle_r = np.radians(x_angle)
+y_angle_r = np.radians(y_angle)
+z_angle_r = np.radians(z_angle)
+
+
+columns = [x, y, z]
+columns = np.asarray(columns)
+print(columns)
+
+
+rx = np.array([
+        [1, 0, 0],
+        [0, np.cos(x_angle_r), -np.sin(x_angle_r)],
+        [0, np.sin(x_angle_r), np.cos(x_angle_r)]
+        ], dtype=np.dtype("float"))
+ry = np.array([
+        [np.cos(y_angle_r), 0, np.sin(y_angle_r)],
+        [0, 1, 0],
+        [-np.sin(y_angle_r), 0, np.cos(y_angle_r)]
+        ], dtype=np.dtype("float"))
+rz = np.array([
+        [np.cos(z_angle_r), -np.sin(z_angle_r), 0],
+        [np.sin(z_angle_r), np.cos(z_angle_r), 0],
+        [0, 0, 1]
+        ], dtype=np.dtype("float"))
+
+identity_matrix = np.array([
+        [1.0, 0.0, 0.0],
+        [0.0, 1.0, 0.0],
+        [0.0, 0.0, 1.0]
+        ], dtype=np.dtype("float"))
+# converting sensor coordinate frame to lidar coordinate frame
+Lidar_matrix = np.array([
+        [-1.0, 0.0, 0.0],
+        [0.0, -1.0, 0.0],
+        [0.0, 0.0, 1.0]
+        ], dtype=np.dtype("float"))
+rotational_matrix = np.matmul(rx, np.matmul(rz, ry))
+flip_y_matrix = np.array([
+        [-1.0, 0.0, 0.0],
+        [0.0, 1.0, 0.0],
+        [0.0, 0.0, -1.0]
+        ], dtype=np.dtype("float"))
+transformation_matrix_flip = np.matmul(flip_y_matrix, np.matmul(rotational_matrix, Lidar_matrix))
+transformation_matrix = np.matmul(rotational_matrix, Lidar_matrix)
+# r_drone = np.matmul(rotational_matrix, r_sensor)
+
+
+#print(A)
+#print(B)
+#print(C)
+print(rotational_matrix)
+print(identity_matrix)
+
+# result = np.matmul(transformation_matrix, columns)
+result_flip = np.matmul(transformation_matrix_flip, columns)
+raw = np.matmul(identity_matrix, columns)
+
+# print(result)
+finalresult_flip = np.matrix.transpose(result_flip)
+# finalresult = np.matrix.transpose(result)
+finalraw = np.matrix.transpose(raw)
+
+# save the point cloud data (x,y,z) as text file, so they can be converted with lasTools
+np.savetxt("6788_z_-20_flip.txt", finalresult_flip, header="x,y,z", comments='', delimiter=",")
+# np.savetxt("6788_z_-20.txt", finalresult, header="x,y,z", comments='', delimiter=",")
+np.savetxt("6788_raw.txt", finalraw, header="x,y,z", comments='', delimiter=",")
+print(finalresult)
+# print(finalraw)
+# np.savetxt("xyz_points.txt", points, delimiter=",")
